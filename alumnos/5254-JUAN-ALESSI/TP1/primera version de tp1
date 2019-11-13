@@ -1,0 +1,701 @@
+primera version de tp1
+
+from multiprocessing import Process, Queue, Lock
+from urllib2 import urlopen, URLError
+from Queue import Empty
+import time
+import os
+# Carácteres alfanuméricos.
+
+def worker(queue):
+	
+		a = len(queue.get().split(" "))
+		queue.put(a)
+	
+
+def main():
+	queue = Queue()
+	archivo_origen=raw_input("archivo origen: ")
+	fdo = os.open( archivo_origen, os.O_RDONLY )
+	leido = os.read(fdo, 1024)
+	EOF = False
+	while EOF == False:
+		queue.put(leido)
+    	if len(leido) != 1024:
+        	EOF = True
+
+
+	processes = []
+	for i in range(2):
+			processes.append(Process(target=worker, args=(queue,)))
+			
+			print "Proceso %d lanzado." % (i + 1)
+    
+	for process in processes:
+			processes[i].start()
+			process.join()
+			
+
+	while queue.empty() is False:
+	
+		print queue.get()
+	
+
+
+if __name__ == "__main__":
+
+	main()
+
+	-------------------------------------------
+
+	segunda version
+
+	from multiprocessing import Process, Queue
+
+import time
+import os
+# Carácteres alfanuméricos.
+
+def worker(queue,i):
+		
+		a = len(queue.get().split(" "))
+		#print queue.get()
+		print "Soy el Proceso %d y puse en la cola la cantidad de palabras:\n"  % (i + 1)
+		print a
+		queue.put(a)
+		#queue.put(len(queue.get().split(" ")))
+
+def main():
+	queue = Queue()
+	archivo_origen=raw_input("archivo origen: ")
+	fdo = os.open( archivo_origen, os.O_RDONLY )
+	EOF = False
+	processes = []
+
+	#while EOF == False:
+
+	leido = os.read(fdo, 1024)
+	
+	
+	for i in range(2):
+
+		queue.put(leido)
+		processes.append(Process(target=worker, args=(queue,i)))
+		processes[i].start()
+		
+
+	for process in processes:
+		
+		process.join()
+
+
+
+	#while queue.empty() is False:
+	print "soy el proceso padre:\n"
+	total = queue.get()
+	total = total + total
+	print "el total de palabras del archivo es:" , total
+if __name__ == "__main__":
+	main()
+
+
+
+
+
+
+
+
+
+	----------------------------------------------------------------------------------------------
+	from multiprocessing import Process, Queue
+import multiprocessing
+import time
+import os
+
+
+import os
+import time
+import multiprocessing
+
+def func1():
+    a = len(mq.get().split(" "))
+    print "hijo1" , a, os.getpid(),os.getppid()
+    mq.put(a)
+
+def func2():
+	b = len(mq.get().split(" "))
+	print "hijo2" , b, os.getpid(),os.getppid()
+	mq.put(b)
+print "soy el padre"
+archivo_origen=raw_input("archivo origen: ")
+fdo = os.open( archivo_origen, os.O_RDONLY )
+
+
+
+h1 = multiprocessing.Process(target=func1,  args=())
+h2 = multiprocessing.Process(target=func2,  args=())
+mq = multiprocessing.Queue()
+h1.start()
+h2.start()
+
+time.sleep(3)
+
+
+EOF = False
+while EOF == False:
+    leido = os.read(fdo, 1024)
+    mq.put (leido)
+    if len(leido) != 1024:
+        EOF = True
+
+
+
+h2.join()
+h1.join()
+
+print "terminaron los hijos"
+
+while mq.empty() is False:
+	print mq.get()
+
+ESTA VERSION FUNCIONA BIEN PERO LE FALTA VALIDACION DE PARAMETROS Y CUENTA FINAL
+
+---------------------------------------------------------------------------------
+
+version con probelma en detectar mq en las funciones
+
+
+from multiprocessing import Process, Queue
+import os
+import time
+import multiprocessing
+import sys
+import getopt
+
+
+
+def ayuda():
+    print("./tp1.py -f <archivo> -n <tamaño_bloque> -p <hijos>")
+      
+    print('./tp1.py -f /etc/services -n 1024 -p 2\n')
+ 
+def func1():
+	
+    a = len(mq.get().split(" "))
+    print "hijo1" , a, os.getpid(),os.getppid()
+    mq.put(a)
+    
+
+def func2():
+	b = len(mq.get().split(" "))
+	print "hijo2" , b, os.getpid(),os.getppid()
+	mq.put(b)
+ 
+ 
+
+def main():
+    try:
+        (opts, args) = getopt.getopt(sys.argv[1:], 'hf:n:p:')
+    #raised whenever an option (which requires a value) is passed without a value.
+    except getopt.GetoptError as err:
+        print(err)
+        sys.exit(2)
+
+    #check if any options were passed
+    if len(opts) != 0:
+        # loop over opts: Ex, [(a,10), (b,20)] => <list>
+        for (o,a) in opts:
+            if o in ('-h'):
+                ayuda()
+                sys.exit()
+            elif o in ('-f'):
+                archivo_origen= sys.argv[2]
+            elif o in ('-n'):
+                bloque= sys.argv[4]
+            elif o in ('-p'):
+                hijos= sys.argv[6]
+            else:
+                #none of the acceptable options were passed
+                ayuda()
+                sys.exit(2)
+    else:
+        #no options were passed
+        ayuda()
+        sys.exit(2)
+    print "soy el padre"
+    print archivo_origen
+    print bloque
+    print hijos
+
+    fdo = os.open( archivo_origen, os.O_RDONLY )
+    total = os.stat(archivo_origen).st_size
+    mq = multiprocessing.Queue()
+    h1 = multiprocessing.Process(target=func1,  args=())
+    h2 = multiprocessing.Process(target=func2,  args=())
+   
+    h1.start()
+    h2.start()
+    time.sleep(3)
+    EOF = False
+    while EOF == False:
+    	leido = os.read(fdo, bloque)
+    	mq.put(leido)
+    if len(leido) != bloque:
+    	EOF = True
+    h2.join()
+    h1.join()
+    print "terminaron los hijos"
+    while mq.empty() is False:
+    	print mq.get()
+ 
+ 
+if __name__ == '__main__':
+    main()
+
+
+
+
+-------------------------------------------------------------------------------------
+
+VERSION CON VALIDACION DE ARGUMENTOS, FALTA CONTAR LAS PALABRAS FINAL
+
+from multiprocessing import Process, Queue
+import os
+import time
+import multiprocessing
+import sys
+import getopt
+
+
+
+def ayuda():
+    print("./tp1.py -f <archivo> -n <tamaño_bloque> -p <hijos>")
+      
+    print('./tp1.py -f /etc/services -n 1024 -p 2\n')
+ 
+def func1():
+	
+    a = len(mq.get().split(" "))
+    print "hijo1" , a, os.getpid(),os.getppid()
+    mq.put(a)
+    
+
+def func2():
+	b = len(mq.get().split(" "))
+	print "hijo2" , b, os.getpid(),os.getppid()
+	mq.put(b)
+ 
+ 
+
+
+try:
+	(opts, args) = getopt.getopt(sys.argv[1:], 'hf:n:p:')
+except getopt.GetoptError as err:
+	print(err)
+	sys.exit(2)
+
+
+
+if len(opts) != 0:
+	for (o,a) in opts:
+		if o in ('-h'):
+			ayuda()
+			sys.exit()
+		elif o in ('-f'):
+			archivo_origen= sys.argv[2]
+		elif o in ('-n'):
+			bloque= sys.argv[4]
+		elif o in ('-p'):
+			hijos= sys.argv[6]
+		else:
+			ayuda()
+			sys.exit(2)
+else:
+	ayuda()
+	sys.exit(2)
+print "soy el padre"
+print archivo_origen
+print bloque
+print hijos
+fdo = os.open( archivo_origen, os.O_RDONLY )
+total = os.stat(archivo_origen).st_size
+h1 = multiprocessing.Process(target=func1,  args=())
+h2 = multiprocessing.Process(target=func2,  args=())
+mq = multiprocessing.Queue()
+h1.start()
+h2.start()
+time.sleep(3)
+EOF = False
+while EOF == False:
+	leido = os.read(fdo, int(bloque))
+	mq.put(leido)
+	if len(leido) != int(bloque):
+		EOF = True
+h2.join()
+h1.join()
+print "terminaron los hijos"
+while mq.empty() is False:
+	print mq.get()
+ 
+
+
+----------------------------------------------------------------------------------------------------------------------
+
+VERSION DONDE SE LANZAN LOS PROCESOS QUE VIENEN POR COMANDOS, FALTA QUE SUMEN EL TOTAL DE PALABRAS Y SINCRONIZARLOS DE ALGUNA MANERA
+
+from multiprocessing import Process, Queue
+import os
+import time
+import multiprocessing
+import sys
+import getopt
+
+
+
+def ayuda():
+    print("./tp1.py -f <archivo> -n <tamaño_bloque> -p <hijos>")
+      
+    print('./tp1.py -f /etc/services -n 1024 -p 2\n')
+ 
+def func1(mq,i):
+	
+    a = len(mq.get().split(" "))
+    print "Soy el proceso %d y acabo de leer la cantidad de palabras: " % (i + 1) , a, os.getpid(),os.getppid()
+    mq.put(a)
+    
+
+def func2():
+	b = len(mq.get().split(" "))
+	print "hijo2" , b, os.getpid(),os.getppid()
+	mq.put(b)
+ 
+ 
+def salir():
+	print "gracias"
+
+try:
+	(opts, args) = getopt.getopt(sys.argv[1:], 'hf:n:p:')
+except getopt.GetoptError as err:
+	print(err)
+	sys.exit(2)
+
+
+
+if len(opts) != 0:
+	for (o,a) in opts:
+		if o in ('-h'):
+			ayuda()
+			sys.exit()
+		elif o in ('-f'):
+			archivo_origen= sys.argv[2]
+		elif o in ('-n'):
+			bloque= sys.argv[4]
+		elif o in ('-p'):
+			hijos= sys.argv[6]
+		else:
+			ayuda()
+			sys.exit(2)
+else:
+	ayuda()
+	sys.exit(2)
+print "soy el padre"
+print  "el nombre del archivo de origen es: " ,archivo_origen
+print "el bloque determinado es: " , bloque
+print "la cantidad de hijos a crear es: " , hijos
+
+processes = []
+
+fdo = os.open( archivo_origen, os.O_RDONLY )
+total = os.stat(archivo_origen).st_size
+
+EOF = False
+mq = Queue()
+
+for i in range(int(hijos)):
+	processes.append(Process(target=func1, args=(mq,i)))
+	processes[i].start()
+#for process in processes:
+#	processes[i].start()
+#	process.join()
+
+#h1 = multiprocessing.Process(target=func1,  args=())
+#h2 = multiprocessing.Process(target=func2,  args=())
+
+#h1.start()
+#h2.start()
+
+
+time.sleep(5)
+
+while EOF == False:
+	leido = os.read(fdo, int(bloque))
+	print "total leido del archivo: " , len(leido)
+	mq.put(leido)
+	if len(leido) != int(bloque):
+		EOF = True
+
+#h2.join()
+#h1.join()
+for process in processes:
+	process.join()
+
+
+print "terminaron los hijos"
+while mq.empty() is False:
+	print mq.get()
+
+
+
+-------------------------------------------------------------
+
+version no terminada pero cuenta palabras mas de una vez
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from multiprocessing import Process, Queue
+import os
+import time
+import multiprocessing
+import sys
+import getopt
+
+
+
+def ayuda():
+    print("./tp1.py -f <archivo> -n <tamaño_bloque> -p <hijos>")
+      
+    print('./tp1.py -f /etc/services -n 1024 -p 2\n')
+ 
+def func1(mq,i):
+	while True:
+		try:
+			a = len(mq.get().split(" "))
+			#print " estoy en try"
+			
+		except mq.empty():
+			break
+		else:
+
+			
+			print "Soy el proceso %d y acabo de leer la cantidad de palabras: " % (i + 1) , a, os.getpid(),os.getppid()
+			mq2.put(a)
+			time.sleep(20)
+
+	return True
+
+
+
+
+def cuenta(texto):
+	contador=0
+	palabras=0
+
+	resutl=str(texto).split(" ")
+	++contador
+	palabras=contador
+
+	print "cantidad de palabras" + palabras
+
+ 
+ 
+def salir():
+	print "gracias"
+
+try:
+	(opts, args) = getopt.getopt(sys.argv[1:], 'hf:n:p:')
+except getopt.GetoptError as err:
+	print(err)
+	sys.exit(2)
+
+
+
+if len(opts) != 0:
+	for (o,a) in opts:
+		if o in ('-h'):
+			ayuda()
+			sys.exit()
+		elif o in ('-f'):
+			archivo_origen= sys.argv[2]
+		elif o in ('-n'):
+			bloque= sys.argv[4]
+		elif o in ('-p'):
+			hijos= sys.argv[6]
+		else:
+			ayuda()
+			sys.exit(2)
+else:
+	ayuda()
+	sys.exit(2)
+print "soy el padre"
+print  "el nombre del archivo de origen es: " ,archivo_origen
+print "el bloque determinado es: " , bloque
+print "la cantidad de hijos a crear es: " , hijos
+
+processes = []
+
+fdo = os.open( archivo_origen, os.O_RDONLY )
+total = os.stat(archivo_origen).st_size
+
+EOF = False
+mq = Queue()
+mq2= Queue()
+
+while EOF == False:
+	leido = os.read(fdo, int(bloque))
+	print "total leido del archivo: " , len(leido)
+	mq.put(leido)
+	if len(leido) != int(bloque):
+		EOF = True
+#for process in processes:
+#	processes[i].start()
+#	process.join()
+
+#h1 = multiprocessing.Process(target=func1,  args=())
+#h2 = multiprocessing.Process(target=func2,  args=())
+
+#h1.start()
+#h2.start()
+for i in range(int(hijos)):
+	p = Process(target=func1, args=(mq,i))
+	processes.append(p)
+	p.start()
+
+
+time.sleep(5)
+
+
+#h2.join()
+#h1.join()
+
+for process in processes:
+		process.join()
+
+print "terminaron los hijos"
+
+while mq2.empty() is False:
+	print mq2.get()
+	
+-------------------------------------------------------------------------------------------------
+CREO QUE ESTA CONTANDO BIEN PEOR INTENTA LARGAR PROCESOS AUN CUANDO YA NO QUEDA NADA EN LA COLA Y AHI LARGA ERROR, FALTA CONTAR AUN
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+from multiprocessing import Process, Queue
+import os
+import time
+import multiprocessing
+import sys
+import getopt
+
+
+
+def ayuda():
+    print("./tp1.py -f <archivo> -n <tamaño_bloque> -p <hijos>")
+      
+    print('./tp1.py -f /etc/services -n 1024 -p 2\n')
+ 
+def func1(mq,i):
+
+	while True:
+			a = len(mq.get().split(" "))
+			#print " estoy en try"
+			print "Soy el proceso %d y acabo de leer la cantidad de palabras: " % (i + 1) , a, os.getpid(),os.getppid()
+			mq.put(a)
+			time.sleep(5)
+
+
+
+
+
+
+def cuenta(texto):
+	contador=0
+	palabras=0
+
+	resutl=str(texto).split(" ")
+	++contador
+	palabras=contador
+
+	print "cantidad de palabras" + palabras
+
+ 
+ 
+def salir():
+	print "gracias"
+
+try:
+	(opts, args) = getopt.getopt(sys.argv[1:], 'hf:n:p:')
+except getopt.GetoptError as err:
+	print(err)
+	sys.exit(2)
+
+
+
+if len(opts) != 0:
+	for (o,a) in opts:
+		if o in ('-h'):
+			ayuda()
+			sys.exit()
+		elif o in ('-f'):
+			archivo_origen= sys.argv[2]
+		elif o in ('-n'):
+			bloque= sys.argv[4]
+		elif o in ('-p'):
+			hijos= sys.argv[6]
+		else:
+			ayuda()
+			sys.exit(2)
+else:
+	ayuda()
+	sys.exit(2)
+print "soy el padre"
+print  "el nombre del archivo de origen es: " ,archivo_origen
+print "el bloque determinado es: " , bloque
+print "la cantidad de hijos a crear es: " , hijos
+
+processes = []
+
+fdo = os.open( archivo_origen, os.O_RDONLY )
+total = os.stat(archivo_origen).st_size
+
+EOF = False
+mq = Queue()
+mq2= Queue()
+
+while EOF == False:
+	leido = os.read(fdo, int(bloque))
+	print "total leido del archivo: " , len(leido)
+	mq.put(leido)
+	if len(leido) != int(bloque):
+		EOF = True
+#for process in processes:
+#	processes[i].start()
+#	process.join()
+
+#h1 = multiprocessing.Process(target=func1,  args=())
+#h2 = multiprocessing.Process(target=func2,  args=())
+
+#h1.start()
+#h2.start()
+for i in range(int(hijos)):
+	p = Process(target=func1, args=(mq,i))
+	processes.append(p)
+	p.start()
+
+
+time.sleep(5)
+
+
+#h2.join()
+#h1.join()
+
+for process in processes:
+		process.join()
+
+print "terminaron los hijos"
+
+#while mq.empty() is False:
+
+	
