@@ -1,5 +1,8 @@
-
 import os,sys,thread,socket
+from utils.help import get_options
+from multiprocessing import Process, Queue
+from datetime import datetime,time
+import os
 
 #********* CONSTANT VARIABLES *********
 BACKLOG = 50            # how many pending connections queue will hold
@@ -10,14 +13,20 @@ BLOCKED = []            # just an example. Remove with [""] for no blocking at a
 #**************************************
 #********* MAIN PROGRAM ***************
 #**************************************
-def main():
-
-    # check the length of command running
-    if (len(sys.argv)<2):
-        print "No port given, using :8080 (http-alt)" 
-        port = 8080
+def comparar_tiempo(start,end):
+    a=start=datetime.strptime(inicio,'%H:%M:%S').time()
+    b=datetime.strptime(fin,'%H:%M:%S').time()
+    #datetime.now().time()
+    #print actual
+    if  a > datetime.now().time() or datetime.now().time() < b:
+	print "no internet"
     else:
-        port = int(sys.argv[1]) # port from argument
+        print "si internet"
+
+
+def main(start,end,port):
+    comparar_tiempo(inicio,fin)
+  
 
     # host and port info.
     host = ''               # blank for localhost
@@ -136,4 +145,25 @@ def proxy_thread(conn, client_addr):
 #********** END PROXY_THREAD ***********
     
 if __name__ == '__main__':
-    main()
+#parte nueva
+    options = get_options()    
+    in_queue = Queue()
+    out_queue = Queue()
+    fd = open(options['file'])
+    puerto = options['port']
+    print puerto
+    inicio = fd.readline()
+    inicio[1:7] 
+    inicio=inicio.replace("\n",'')
+    fin = fd.readline()
+    fin[1:7]
+    fin=fin.replace("\n",'')
+    print inicio
+    main(inicio,fin,puerto)
+    
+
+    
+
+
+
+
