@@ -1,3 +1,5 @@
+#!/usr/bin/python 
+
 import os,sys,thread,socket
 from utils.help import get_options
 from multiprocessing import Process, Queue
@@ -16,22 +18,20 @@ BLOCKED = []            # just an example. Remove with [""] for no blocking at a
 def comparar_tiempo(start,end):
     a=start=datetime.strptime(inicio,'%H:%M:%S').time()
     b=datetime.strptime(fin,'%H:%M:%S').time()
-    #datetime.now().time()
-    #print actual
     if  a > datetime.now().time() or datetime.now().time() < b:
-	print "no internet"
+        return False
+
     else:
-        print "si internet"
+        return True
 
 
 def main(start,end,port):
     comparar_tiempo(inicio,fin)
   
-
     # host and port info.
     host = ''               # blank for localhost
     
-    print "Proxy Server Running on ",host,":",port
+    print "Servidor Proxy corriendo en ",host,":",port
 
     try:
         # create a socket
@@ -46,7 +46,7 @@ def main(start,end,port):
     except socket.error, (value, message):
         if s:
             s.close()
-        print "Could not open socket:", message
+        print "No se pudo abrir el socket:", message
         sys.exit(1)
 
     # get the connection from client
@@ -54,7 +54,7 @@ def main(start,end,port):
         conn, client_addr = s.accept()
 
         # create a thread to handle request
-        thread.start_new_thread(proxy_thread, (conn, client_addr))
+        thread.start_new_thread(proxy_thread, (conn, client_addr, inicio, fin))
         
     s.close()
 #************** END MAIN PROGRAM ***************
@@ -73,7 +73,7 @@ def printout(type,request,address):
 #********* PROXY_THREAD FUNC ***************
 # A thread to handle request from browser
 #*******************************************
-def proxy_thread(conn, client_addr):
+def proxy_thread(conn, client_addr, inicio, fin):
 
     # get the request from browser
     request = conn.recv(MAX_DATA_RECV)
@@ -84,16 +84,10 @@ def proxy_thread(conn, client_addr):
     # get url
     url = first_line.split(' ')[1]
 
-    for i in range(0,len(BLOCKED)):
-        if BLOCKED[i] in url:
-            printout("Blacklisted",first_line,client_addr)
-            conn.close()
-            sys.exit(1)
-
+    # get Protocolo
+    protocolo = first_line.split(' ')[0]
 
     printout("Request",first_line,client_addr)
-    # print "URL:",url
-    # print
     
     # find the webserver and port
     http_pos = url.find("://")          # find pos of ://
@@ -119,22 +113,28 @@ def proxy_thread(conn, client_addr):
         webserver = temp[:port_pos]
 
     try:
-        # create a socket to connect to the web server
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-        s.connect((webserver, port))
-        s.send(request)         # send request to webserver
-        
-        while 1:
-            # receive data from web server
-            data = s.recv(MAX_DATA_RECV)
-            
-            if (len(data) > 0):
-                # send to browser
-                conn.send(data)
+        if protocolo=="GET" or protocolo=="POST":
+            if comparar_tiempo(inicio, fin) is False:
+                printout("Blacklisted",first_line,client_addr)
+                conn.close()
+                sys.exit(1)
             else:
-                break
-        s.close()
-        conn.close()
+                # create a socket to connect to the web server
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+                s.connect((webserver, port))
+                s.send(request)         # send request to webserver
+                
+                while 1:
+                    # receive data from web server
+                    data = s.recv(MAX_DATA_RECV)
+                    
+                    if (len(data) > 0):
+                        # send to browser
+                        conn.send(data)
+                    else:
+                        break
+                s.close()
+                conn.close()
     except socket.error, (value, message):
         if s:
             s.close()
